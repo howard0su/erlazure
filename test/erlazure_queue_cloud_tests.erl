@@ -59,14 +59,8 @@ list_queues_test_() ->
 delete_queue_test_() ->
                 {setup,
                  fun start_create/0,
-                 fun stop/1,
                  fun delete_queue/1}.
 
-delete_queue_twice_test_() ->
-                {setup,
-                 fun start_create/0,
-                 fun stop/1,
-                 fun delete_queue_twice/1}.
 
 set_queue_acl_test_() ->
                 {setup,

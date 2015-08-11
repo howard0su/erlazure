@@ -29,7 +29,7 @@
 -author("Dmitry Kataskin").
 
 %% API
--export([append_ticks/1, get_ticks/0, read_file/1]).
+-export([append_ticks/1, get_ticks/0, read_file/1, get_random_string/2]).
 
 append_ticks(Name) ->
         Name ++ integer_to_list(get_ticks()).
@@ -44,3 +44,10 @@ read_file(FileName) ->
 
 file_path(File) ->
         filename:join([code:priv_dir(erlazure), responses, File]).
+
+get_random_string(Length, AllowedChars) ->
+    lists:foldl(fun(_, Acc) ->
+                        [lists:nth(random:uniform(length(AllowedChars)),
+                                   AllowedChars)]
+                            ++ Acc
+                end, [], lists:seq(1, Length)).

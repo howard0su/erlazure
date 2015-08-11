@@ -195,7 +195,7 @@ get_request_param_specs() ->
         [#param_spec{ id = block_list_type, type = uri, name = "blocklisttype" },
          #param_spec{ id = blob_block_id, type = uri, name = "blockid" },
          #param_spec{ id = res_type, type = uri, name = "restype" },
-	 #param_spec{ id = blob_range, type = header, name = "Range" },
+         #param_spec{ id = blob_range, type = header, name = "Range" },
          #param_spec{ id = blob_copy_source, type = header, name = "x-ms-copy-source" },
          #param_spec{ id = blob_type, type = header, name = "x-ms-blob-type", parse_fun = fun blob_type_to_str/1 },
          #param_spec{ id = blob_content_length, type = header, name = "x-ms-blob-content-length" },
@@ -203,4 +203,5 @@ get_request_param_specs() ->
          #param_spec{ id = lease_id, type = header, name = "x-ms-lease-id" },
          #param_spec{ id = lease_duration, type = header, name = "x-ms-lease-duration" },
          #param_spec{ id = lease_break_period, type = header, name = "x-ms-break-period" },
-         #param_spec{ id = lease_action, type = header, name = "x-ms-lease-action" }].
+         #param_spec{ id = lease_action, type = header, name = "x-ms-lease-action" },
+         #param_spec{ id = page_write, type = header, name = "x-ms-page-write" }].

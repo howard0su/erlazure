@@ -72,6 +72,7 @@
 -export([put_block_list/4, put_block_list/5]).
 -export([get_block_list/3, get_block_list/4]).
 -export([put_page/5, put_page/6]).
+-export([clear_page/5, clear_page/6]).
 -export([acquire_blob_lease/4, acquire_blob_lease/5, acquire_blob_lease/6]).
 
 %% Table API
@@ -190,7 +191,7 @@ put_block_blob(Pid, Container, Name, Data, Options) ->
         gen_server:call(Pid, {put_blob, Container, Name, block_blob, Data, Options}).
 
 put_page_blob(Pid, Container, Name, ContentLength) ->
-        put_block_blob(Pid, Container, Name, ContentLength, []).
+        put_page_blob(Pid, Container, Name, ContentLength, []).
 put_page_blob(Pid, Container, Name, ContentLength, Options) ->
         gen_server:call(Pid, {put_blob, Container, Name, page_blob, ContentLength, Options}).
 
@@ -234,10 +235,15 @@ get_block_list(Pid, Container, Blob) ->
 get_block_list(Pid, Container, Blob, Options) ->
         gen_server:call(Pid, {get_block_list, Container, Blob, Options}).
 
-put_page(Pid, Container, Blob, StartOffset, Content) ->
-        put_page(Pid, Container, Blob, StartOffset, Content, []).
-put_page(Pid, Container, Blob, StartOffset, Content, Options) ->
-        gen_server:call(Pid, {put_page, Container, Blob, StartOffset, Content, Options}).
+put_page(Pid, Container, Blob, Offset, Content) ->
+        put_page(Pid, Container, Blob, Offset, Content, []).
+put_page(Pid, Container, Blob, Offset, Content, Options) ->
+        gen_server:call(Pid, {put_page, Container, Blob, Content, [{blob_range, lists:concat(["bytes=", Offset, "-", Offset - 1 + erlazure_http:get_content_length(Content)])}] ++ Options}).
+
+clear_page(Pid, Container, Blob, Offset, Length) ->
+        clear_page(Pid, Container, Blob, Offset, Length, []).
+clear_page(Pid, Container, Blob, Offset, Length, Options) ->
+        gen_server:call(Pid, {put_page, Container, Blob, clear, [{blob_range, lists:concat(["bytes=", Offset, "-", Offset - 1 + Length])}] ++ Options}).
 
 acquire_blob_lease(Pid, Container, Blob, Duration) ->
         acquire_blob_lease(Pid, Container, Blob, "", Duration, []).
@@ -628,17 +634,21 @@ handle_call({delete_table, TableName}, _From, State) ->
         {reply, {ok, deleted}, State};
 
 % Put page
-handle_call({put_page, Container, Blob, StartOffset, Content, Options}, _From, State) ->
+handle_call({put_page, Container, Blob, Content, Options}, _From, State) ->
         ServiceContext = new_service_context(?blob_service, State),
-        Params = [{comp, page},
-                  {range, lists:concat([
-                    StartOffset,
-                    "-",
-                    StartOffset + byte_size(Content)
-                    ])}],
+        Params = [{page_write,
+            if
+                Content =:= clear -> clear;
+                true -> update
+            end
+            }, {comp, page}],
         ReqOptions = [{method, put},
                       {path, lists:concat([Container, "/", Blob])},
-                      {body, Content},
+                      {body, if
+                            Content =:= clear -> <<>>;
+                            true -> Content
+                            end
+                      },
                       {params, Params ++ Options}],
         ReqContext = new_req_context(?blob_service, State#state.account, State#state.param_specs, ReqOptions),
 
