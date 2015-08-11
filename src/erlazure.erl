@@ -69,6 +69,7 @@
 -export([put_block/5, put_block/6]).
 -export([put_block_list/4, put_block_list/5]).
 -export([get_block_list/3, get_block_list/4]).
+-export([put_page/5, put_page/6]).
 -export([acquire_blob_lease/4, acquire_blob_lease/5, acquire_blob_lease/6]).
 
 %% Table API
@@ -226,6 +227,11 @@ get_block_list(Pid, Container, Blob) ->
         get_block_list(Pid, Container, Blob, []).
 get_block_list(Pid, Container, Blob, Options) ->
         gen_server:call(Pid, {get_block_list, Container, Blob, Options}).
+
+put_page(Pid, Container, Blob, StartOffset, Content) ->
+        put_page(Pid, Container, Blob, StartOffset, Content, []).
+put_page(Pid, Container, Blob, StartOffset, Content, Options) ->
+        gen_server:call(Pid, {put_page, Container, Blob, StartOffset, Content, Options}).
 
 acquire_blob_lease(Pid, Container, Blob, Duration) ->
         acquire_blob_lease(Pid, Container, Blob, "", Duration, []).
@@ -613,7 +619,25 @@ handle_call({delete_table, TableName}, _From, State) ->
                       {method, delete}],
         ReqContext = new_req_context(?table_service, State#state.account, State#state.param_specs, ReqOptions),
         {?http_no_content, _} = execute_request(ServiceContext, ReqContext),
-        {reply, {ok, deleted}, State}.
+        {reply, {ok, deleted}, State};
+
+% Put page
+handle_call({put_page, Container, Blob, StartOffset, Content, Options}, _From, State) ->
+        ServiceContext = new_service_context(?blob_service, State),
+        Params = [{comp, page},
+                  {range, lists:concat([
+                    StartOffset,
+                    "-",
+                    StartOffset + byte_size(Content)
+                    ])}],
+        ReqOptions = [{method, put},
+                      {path, lists:concat([Container, "/", Blob])},
+                      {body, Content},
+                      {params, Params ++ Options}],
+        ReqContext = new_req_context(?blob_service, State#state.account, State#state.param_specs, ReqOptions),
+
+        {?http_created, _Body} = execute_request(ServiceContext, ReqContext),
+        {reply, {ok, created}, State}.
 
 handle_cast(_Msg, State) ->
         {noreply, State}.
