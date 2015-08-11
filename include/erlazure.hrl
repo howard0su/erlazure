@@ -145,7 +145,7 @@
                       type = undefined :: undefined | request_param_type(),
                       name = "" :: string(),
                       parse_fun = fun(Value) ->
-                                    lists:flatten(io_lib:format("~s", [Value]))
+                                    lists:concat([Value])
                                   end :: fun((any()) -> string())}).
 -type param_spec() :: #param_spec{}.
 -export_type([param_spec/0]).
