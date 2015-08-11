@@ -35,8 +35,8 @@
 -include("erlazure.hrl").
 -include_lib("eunit/include/eunit.hrl").
 
-%% API
--export([]).
+-define(account_name, "devstoreaccount1").
+-define(account_key, "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==").
 
 create_queue_test_() ->
                 {setup,
@@ -123,18 +123,23 @@ peek_messages_test_() ->
                   fun peek_messages/1}.
 
 start() ->
+    inets:start(),
     {ok, Pid} = erlazure:start(?account_name, ?account_key),
     UniqueQueueName = get_queue_unique_name(),
     {Pid, UniqueQueueName}.
 
 start_create() ->
-                {ok, Pid} = erlazure:start(?account_name, ?account_key),
-                UniqueQueueName = get_queue_unique_name(),
-                {ok, created} = erlazure:create_queue(Pid, UniqueQueueName),
-                {Pid, UniqueQueueName}.
+    inets:start(),
+    {ok, Pid} = erlazure:start(?account_name, ?account_key),
+    UniqueQueueName = get_queue_unique_name(),
+    {ok, created} = erlazure:create_queue(Pid, UniqueQueueName),
+    {Pid, UniqueQueueName}.
 
 stop({Pid, QueueName}) ->
-                erlazure:delete_queue(Pid, QueueName).
+    try erlazure:delete_queue(Pid, QueueName)
+    catch
+      throw:X -> X
+    end.
 
 create_queue({Pid, QueueName}) ->
                 Response = erlazure:create_queue(Pid, QueueName),

@@ -36,10 +36,12 @@
 
 -define(json_content_type, "application/json").
 
+-define(DevAccount, "devstoreaccount1").
+
 -behaviour(gen_server).
 
 %% API
--export([start/2]).
+-export([start/0, start/2]).
 
 %% Queue API
 -export([list_queues/1, list_queues/2]).
@@ -87,6 +89,10 @@
 -spec start(string(), string()) -> {ok, pid()}.
 start(Account, Key) ->
         gen_server:start_link(?MODULE, {Account, Key}, []).
+
+-spec start() -> {ok, pid()}.
+start() ->
+        gen_server:start_link(?MODULE, {?DevAccount, ""}, []).
 
 %%====================================================================
 %% Queue
@@ -669,8 +675,7 @@ execute_request(ServiceContext = #service_context{}, ReqContext = #req_context{}
                                       ServiceContext#service_context.account)}],
 
         Headers1 = if (ReqContext#req_context.method =:= put orelse
-                       ReqContext#req_context.method =:= post) andalso
-                      (ReqContext#req_context.body =/= []) ->
+                       ReqContext#req_context.method =:= post) ->
                         ContentHeaders = [{"Content-Type", ReqContext#req_context.content_type},
                                           {"Content-Length", integer_to_list(ReqContext#req_context.content_length)}],
                         lists:append([Headers, ContentHeaders, ReqContext#req_context.headers]);
@@ -730,11 +735,22 @@ get_headers_string(Service, Headers) ->
 sign_string(Key, StringToSign) ->
         crypto:hmac(sha256, base64:decode(Key), StringToSign).
 
+build_uri_base(Service, ?DevAccount) ->
+        lists:concat(["http://127.0.0.1:", get_emulate_port(Service),"/"]);
 build_uri_base(Service, Account) ->
         lists:concat(["https://", get_host(Service, Account), "/"]).
 
+get_path_base(?DevAccount) -> lists:concat([?DevAccount, "/"]);
+get_path_base(_Account) -> "".
+
+get_host(Service, ?DevAccount) ->
+        lists:concat(["127.0.0.1:", get_emulate_port(Service)]);
 get_host(Service, Account) ->
         lists:concat([Account, ".", erlang:atom_to_list(Service), ".core.windows.net"]).
+
+get_emulate_port(blob) -> 10000;
+get_emulate_port(queue) -> 10001;
+get_emulate_port(table) -> 10002.
 
 -spec canonicalize_headers([string()]) -> string().
 canonicalize_headers(Headers) ->
@@ -834,7 +850,7 @@ new_req_context(Service, Account, ParamSpecs, Options) ->
         ReqHeaders = lists:append([Headers, AddHeaders, get_req_headers(Params, ParamSpecs)]),
 
         #req_context{ address = build_uri_base(Service, Account),
-                      path = Path,
+                      path = get_path_base(Account) ++ Path,
                       method = Method,
                       body = Body,
                       content_length = erlazure_http:get_content_length(Body),
